@@ -35,10 +35,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
 
                         .requestMatchers(
-                                "http://localhost:3000",
-                                "http://localhost:5173",
-                                "https://admin.bossdental.com.mx",
-                                "https://bossdental.com.mx"
+                                "/auth/login",
+                                "/auth/refresh"
                         ).permitAll()
 
                         .anyRequest().authenticated()

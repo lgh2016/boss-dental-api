@@ -19,7 +19,9 @@ public class CorsConfig {
                 registry.addMapping("/**")
                         .allowedOrigins(
                                 "http://localhost:3000",
-                                "http://localhost:5173"
+                                "http://localhost:5173",
+                                "https://admin.bossdental.com.mx",
+                                "https://bossdental.com.mx"
                         )
                         .allowedMethods(
                                 "GET",

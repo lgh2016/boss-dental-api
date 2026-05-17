@@ -14,10 +14,7 @@ import java.time.LocalDate;
 @Entity
 @Table(name = "patients")
 public class Patient extends BaseEntity {
-
-    @Column(nullable = false, unique = true, length = 30)
-    private String patientNumber;
-
+    
     @Column(nullable = false, length = 100)
     private String name;
 
@@ -37,6 +34,9 @@ public class Patient extends BaseEntity {
 
     @Column(length = 255)
     private String address;
+
+    @Column(length = 500)
+    private String photoUrl;
 
     @Column(length = 150)
     private String emergencyContactName;

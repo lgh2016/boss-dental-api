@@ -104,7 +104,7 @@ public class AuthService {
         String refreshToken = request.refreshToken();
 
         if (!jwtService.isRefreshToken(refreshToken)) {
-            throw new RuntimeException("Refresh token inválido");
+            throw new RuntimeException("Refresh accessToken inválido");
         }
 
         String email = jwtService.extractUsername(refreshToken);

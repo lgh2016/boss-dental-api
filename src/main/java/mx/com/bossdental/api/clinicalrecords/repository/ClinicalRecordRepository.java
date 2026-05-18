@@ -11,4 +11,8 @@ public interface ClinicalRecordRepository
     Optional<ClinicalRecord> findByExpedientNumber(String expedientNumber);
 
     Optional<ClinicalRecord> findByPatientId(Long patientId);
+
+    boolean existsByExpedientNumber(String expedientNumber);
+
+    long countByActiveTrue();
 }

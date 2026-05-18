@@ -1,8 +1,11 @@
 package mx.com.bossdental.api.patients.controller;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import mx.com.bossdental.api.common.dto.PageResponse;
+import mx.com.bossdental.api.patients.dto.PatientCreateRequest;
 import mx.com.bossdental.api.patients.dto.PatientListResponse;
+import mx.com.bossdental.api.patients.dto.PatientResponse;
 import mx.com.bossdental.api.patients.service.PatientService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -24,5 +27,12 @@ public class PatientController {
         return ResponseEntity.ok(
                 patientService.findAll(page, size, query)
         );
+    }
+
+    @PostMapping
+    public PatientResponse createPatient(
+            @Valid @RequestBody PatientCreateRequest request
+    ) {
+        return patientService.createPatient(request);
     }
 }

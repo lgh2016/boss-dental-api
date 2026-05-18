@@ -25,4 +25,8 @@ public interface PatientRepository extends JpaRepository<Patient, Long> {
             @Param("query") String query,
             Pageable pageable
     );
+
+    boolean existsByEmailIgnoreCaseAndActiveTrue(String email);
+
+    boolean existsByPhoneAndActiveTrue(String phone);
 }

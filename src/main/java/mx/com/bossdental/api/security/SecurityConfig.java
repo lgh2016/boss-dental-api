@@ -36,7 +36,8 @@ public class SecurityConfig {
 
                         .requestMatchers(
                                 "/auth/login",
-                                "/auth/refresh"
+                                "/auth/refresh",
+                                "/error"
                         ).permitAll()
 
                         .anyRequest().authenticated()

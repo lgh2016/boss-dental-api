@@ -2,15 +2,21 @@ package mx.com.bossdental.api.appointments.service;
 
 import lombok.RequiredArgsConstructor;
 import mx.com.bossdental.api.appointments.constants.AppointmentStatusCode;
-import mx.com.bossdental.api.appointments.dto.LockAppointmentRequest;
-import mx.com.bossdental.api.appointments.dto.LockAppointmentResponse;
-import mx.com.bossdental.api.appointments.dto.StartSlotsResponse;
+import mx.com.bossdental.api.appointments.dto.request.ConfirmAppointmentRequest;
+import mx.com.bossdental.api.appointments.dto.request.LockAppointmentRequest;
+import mx.com.bossdental.api.appointments.dto.request.UpdateAppointmentEndTimeRequest;
+import mx.com.bossdental.api.appointments.dto.response.AppointmentResponse;
+import mx.com.bossdental.api.appointments.dto.response.LockAppointmentResponse;
+import mx.com.bossdental.api.appointments.dto.response.StartSlotsResponse;
 import mx.com.bossdental.api.appointments.entity.Appointment;
 import mx.com.bossdental.api.appointments.entity.AppointmentStatus;
+import mx.com.bossdental.api.appointments.mapper.AppointmentMapper;
 import mx.com.bossdental.api.appointments.repository.AppointmentRepository;
 import mx.com.bossdental.api.appointments.repository.AppointmentStatusRepository;
 import mx.com.bossdental.api.branches.entity.Branch;
 import mx.com.bossdental.api.branches.repository.BranchRepository;
+import mx.com.bossdental.api.exceptions.AppointmentLockExpiredException;
+import mx.com.bossdental.api.exceptions.BusinessException;
 import mx.com.bossdental.api.users.entity.User;
 import mx.com.bossdental.api.users.repository.UserRepository;
 import org.springframework.stereotype.Service;
@@ -40,6 +46,7 @@ public class AppointmentAvailabilityService {
     private final UserRepository userRepository;
     private final BranchRepository branchRepository;
     private final PatientRepository patientRepository;
+    private final AppointmentMapper appointmentMapper;
 
     public StartSlotsResponse getStartSlots(Long doctorId, Long branchId, LocalDate date) {
 
@@ -183,6 +190,286 @@ public class AppointmentAvailabilityService {
                 endSlots
         );
     }
+
+    /**
+     * Confirma una cita previamente bloqueada.
+     *
+     * @param appointmentId ID de la cita.
+     * @param request       información de confirmación.
+     * @return cita confirmada.
+     */
+    @Transactional
+    public AppointmentResponse confirmAppointment(
+            Long appointmentId,
+            ConfirmAppointmentRequest request
+    ) {
+
+        /*
+         * Buscar cita.
+         */
+        Appointment appointment = appointmentRepository.findById(
+                        appointmentId
+                )
+                .orElseThrow(() ->
+                        new BusinessException(
+                                "Appointment not found."
+                        )
+                );
+
+        /*
+         * Validar que la cita se encuentre LOCKED.
+         */
+        if (!"LOCKED".equals(
+                appointment.getStatus().getCode()
+        )) {
+
+            throw new BusinessException(
+                    "Only LOCKED appointments can be confirmed."
+            );
+        }
+
+        /*
+         * Validar expiración del lock.
+         */
+        if (appointment.getLockedUntil() == null
+                || appointment.getLockedUntil()
+                .isBefore(LocalDateTime.now())) {
+            appointmentRepository.delete(appointment);
+
+            throw new BusinessException(
+                    "Appointment lock has expired."
+            );
+        }
+
+        /*
+         * Buscar paciente.
+         */
+        Patient patient = patientRepository.findById(
+                        request.getPatientId()
+                )
+                .orElseThrow(() ->
+                        new BusinessException(
+                                "Patient not found."
+                        ));
+
+        /*
+         * Buscar status CONFIRMED.
+         */
+        AppointmentStatus confirmedStatus =
+                appointmentStatusRepository.findByCodeAndActiveTrue(
+                                AppointmentStatusCode.CONFIRMED
+                        )
+                        .orElseThrow(() ->
+                                new BusinessException(
+                                        "CONFIRMED status not found."
+                                ));
+
+        /*
+         * Completar información de la cita.
+         */
+        appointment.setPatient(patient);
+        appointment.setReason(request.getReason());
+        appointment.setNotes(request.getNotes());
+
+        /*
+         * Actualizar status.
+         */
+        appointment.setStatus(
+                confirmedStatus
+        );
+
+        /*
+         * Registrar fecha de confirmación.
+         */
+        appointment.setConfirmedAt(
+                LocalDateTime.now()
+        );
+
+        /*
+         * Limpiar lock temporal.
+         */
+        appointment.setLockedUntil(null);
+        appointment.setLockedByUser(null);
+
+        /*
+         * Guardar cambios.
+         */
+        appointmentRepository.save(
+                appointment
+        );
+
+        /*
+         * Retornar response.
+         */
+        return appointmentMapper.toResponse(
+                appointment
+        );
+    }
+
+    /**
+     * Actualiza la hora final
+     * de una cita bloqueada.
+     *
+     * @param appointmentId ID de la cita.
+     * @param request nueva hora final.
+     * @return lock actualizado.
+     */
+    @Transactional(
+            noRollbackFor = AppointmentLockExpiredException.class
+    )
+    public LockAppointmentResponse updateEndTime(
+            Long appointmentId,
+            UpdateAppointmentEndTimeRequest request
+    ) {
+
+        /*
+         * Buscar cita.
+         */
+        Appointment appointment = appointmentRepository.findById(
+                        appointmentId
+                )
+                .orElseThrow(() ->
+                        new BusinessException(
+                                "Appointment not found."
+                        )
+                );
+
+        /*
+         * Validar status LOCKED.
+         */
+        if (!AppointmentStatusCode.LOCKED.equals(
+                appointment.getStatus().getCode()
+        )) {
+
+            throw new BusinessException(
+                    "Only LOCKED appointments can be updated."
+            );
+        }
+
+        /*
+         * Validar expiración del lock.
+         */
+        if (appointment.getLockedUntil() == null
+                || appointment.getLockedUntil()
+                .isBefore(LocalDateTime.now())) {
+
+            appointmentRepository.delete(appointment);
+            appointmentRepository.flush();
+
+            throw new AppointmentLockExpiredException(
+                    "Appointment lock has expired."
+            );
+        }
+
+        /*
+         * Validar hora final.
+         */
+        if (!request.getEndTime().isAfter(
+                appointment.getStartTime()
+        )) {
+
+            throw new BusinessException(
+                    "End time must be after start time."
+            );
+        }
+
+        /*
+         * Validar horario del consultorio.
+         */
+        if (request.getEndTime().isAfter(
+                getCloseTime(
+                        appointment.getAppointmentDate()
+                )
+        )) {
+
+            throw new BusinessException(
+                    "The selected schedule exceeds clinic hours."
+            );
+        }
+
+        /*
+         * Buscar citas conflictivas.
+         */
+        List<String> blockingStatuses = List.of(
+                AppointmentStatusCode.LOCKED,
+                AppointmentStatusCode.CONFIRMED,
+                AppointmentStatusCode.COMPLETED
+        );
+
+        List<Appointment> blockingAppointments =
+                appointmentRepository.findAppointmentsBlockingAvailability(
+                        appointment.getDentist().getId(),
+                        appointment.getBranch().getId(),
+                        appointment.getAppointmentDate(),
+                        blockingStatuses
+                );
+
+        /*
+         * Excluir cita actual.
+         */
+        blockingAppointments = blockingAppointments.stream()
+                .filter(item ->
+                        !item.getId().equals(
+                                appointment.getId()
+                        )
+                )
+                .toList();
+
+        /*
+         * Validar conflictos.
+         */
+        if (hasConflict(
+                appointment.getStartTime(),
+                request.getEndTime(),
+                blockingAppointments
+        )) {
+
+            throw new BusinessException(
+                    "The selected schedule is no longer available."
+            );
+        }
+
+        /*
+         * Actualizar hora final.
+         */
+        appointment.setEndTime(
+                request.getEndTime()
+        );
+
+        /*
+         * Renovar lock.
+         */
+        appointment.setLockedUntil(
+                LocalDateTime.now().plusMinutes(
+                        LOCK_MINUTES
+                )
+        );
+
+        /*
+         * Guardar cambios.
+         */
+        appointmentRepository.save(
+                appointment
+        );
+
+        /*
+         * Retornar response.
+         */
+        return new LockAppointmentResponse(
+                appointment.getId(),
+                appointment.getDentist().getId(),
+                appointment.getBranch().getId(),
+                appointment.getAppointmentDate(),
+                appointment.getStartTime(),
+                appointment.getEndTime(),
+                AppointmentStatusCode.LOCKED,
+                appointment.getLockedUntil(),
+                List.of()
+        );
+    }
+
+
+    // METODOS PRIVADOS.
 
     private boolean isPastSlot(LocalDate date, LocalTime startTime) {
         return date.isEqual(LocalDate.now()) && startTime.isBefore(LocalTime.now());

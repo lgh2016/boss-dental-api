@@ -1,4 +1,4 @@
-package mx.com.bossdental.api.appointments.dto;
+package mx.com.bossdental.api.appointments.dto.response;
 
 import java.time.LocalDate;
 import java.time.LocalTime;

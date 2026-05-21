@@ -1,0 +1,29 @@
+package mx.com.bossdental.api.appointments.mapper;
+
+import mx.com.bossdental.api.appointments.dto.response.AppointmentResponse;
+import mx.com.bossdental.api.appointments.entity.Appointment;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+
+/**
+ * Mapper de appointments.
+ */
+@Mapper(componentModel = "spring")
+public interface AppointmentMapper {
+
+    /**
+     * Convierte entidad Appointment a response.
+     *
+     * @param appointment entidad.
+     * @return response.
+     */
+    @Mapping(target = "patientId", source = "patient.id")
+    @Mapping(target = "patientName", source = "patient.name")
+    @Mapping(target = "dentistId", source = "dentist.id")
+    @Mapping(target = "dentistName", source = "dentist.name")
+    @Mapping(target = "statusCode", source = "status.code")
+    AppointmentResponse toResponse(
+            Appointment appointment
+    );
+
+}

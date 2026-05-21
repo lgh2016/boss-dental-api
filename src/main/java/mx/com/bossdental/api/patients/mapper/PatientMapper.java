@@ -29,5 +29,9 @@ public interface PatientMapper {
                     )
                     """
     )
+    @Mapping(
+            target = "expedientNumber",
+            source = "clinicalRecord.expedientNumber"
+    )
     PatientListResponse toListResponse(Patient patient);
 }

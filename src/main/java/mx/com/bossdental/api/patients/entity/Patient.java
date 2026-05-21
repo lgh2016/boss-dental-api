@@ -1,10 +1,9 @@
 package mx.com.bossdental.api.patients.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import mx.com.bossdental.api.clinicalrecords.entity.ClinicalRecord;
 import mx.com.bossdental.api.common.entity.BaseEntity;
 
 import java.time.LocalDate;
@@ -43,4 +42,7 @@ public class Patient extends BaseEntity {
 
     @Column(length = 20)
     private String emergencyContactPhone;
+
+    @OneToOne(mappedBy = "patient", fetch = FetchType.LAZY)
+    private ClinicalRecord clinicalRecord;
 }

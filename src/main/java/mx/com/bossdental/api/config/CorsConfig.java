@@ -21,7 +21,8 @@ public class CorsConfig {
                                 "http://localhost:3000",
                                 "http://localhost:5173",
                                 "https://admin.bossdental.com.mx",
-                                "https://bossdental.com.mx"
+                                "https://bossdental.com.mx",
+                                "https://dental-admin-10.preview.emergentagent.com"
                         )
                         .allowedMethods(
                                 "GET",

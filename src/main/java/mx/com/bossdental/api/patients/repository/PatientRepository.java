@@ -3,16 +3,18 @@ package mx.com.bossdental.api.patients.repository;
 import mx.com.bossdental.api.patients.entity.Patient;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface PatientRepository extends JpaRepository<Patient, Long> {
 
+    @EntityGraph(attributePaths = "clinicalRecord")
     @Query("""
     SELECT p
     FROM Patient p
-    LEFT JOIN ClinicalRecord cr ON cr.patient = p
+    LEFT JOIN p.clinicalRecord cr
     WHERE (:query IS NULL OR :query = ''
         OR LOWER(FUNCTION('unaccent', p.name)) LIKE LOWER(FUNCTION('unaccent', CONCAT('%', :query, '%')))
         OR LOWER(FUNCTION('unaccent', p.lastName)) LIKE LOWER(FUNCTION('unaccent', CONCAT('%', :query, '%')))

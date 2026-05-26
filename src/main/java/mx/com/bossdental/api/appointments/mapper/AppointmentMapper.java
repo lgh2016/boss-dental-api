@@ -1,9 +1,6 @@
 package mx.com.bossdental.api.appointments.mapper;
 
-import mx.com.bossdental.api.appointments.dto.response.AppointmentResponse;
-import mx.com.bossdental.api.appointments.dto.response.LockAppointmentResponse;
-import mx.com.bossdental.api.appointments.dto.response.UpdateAppointmentDentistResponse;
-import mx.com.bossdental.api.appointments.dto.response.UpdateAppointmentStartTimeResponse;
+import mx.com.bossdental.api.appointments.dto.response.*;
 import mx.com.bossdental.api.appointments.entity.Appointment;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -49,6 +46,18 @@ public interface AppointmentMapper {
     @Mapping(target = "appointmentId", source = "id")
     @Mapping(target = "dentistId", source = "dentist.id")
     UpdateAppointmentDentistResponse toUpdateDentistResponse(
+            Appointment appointment
+    );
+
+    /**
+     * Convierte Appointment a response
+     * de actualización de fecha.
+     *
+     * @param appointment entidad.
+     * @return response.
+     */
+    @Mapping(target = "appointmentId", source = "id")
+    UpdateAppointmentDateResponse toUpdateDateResponse(
             Appointment appointment
     );
 

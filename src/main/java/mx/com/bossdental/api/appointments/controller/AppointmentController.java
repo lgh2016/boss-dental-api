@@ -3,10 +3,7 @@ package mx.com.bossdental.api.appointments.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import mx.com.bossdental.api.appointments.dto.request.*;
-import mx.com.bossdental.api.appointments.dto.response.AppointmentResponse;
-import mx.com.bossdental.api.appointments.dto.response.LockAppointmentResponse;
-import mx.com.bossdental.api.appointments.dto.response.StartSlotsResponse;
-import mx.com.bossdental.api.appointments.dto.response.UpdateAppointmentStartTimeResponse;
+import mx.com.bossdental.api.appointments.dto.response.*;
 import mx.com.bossdental.api.appointments.service.AppointmentAvailabilityService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -102,6 +99,28 @@ public class AppointmentController {
 
         return ResponseEntity.ok(
                 appointmentAvailabilityService.updateStartTime(
+                        appointmentId,
+                        request
+                )
+        );
+    }
+
+    /**
+     * Actualiza el doctor
+     * de una cita bloqueada.
+     *
+     * @param appointmentId ID de la cita.
+     * @param request nuevo doctor.
+     * @return lock actualizado.
+     */
+    @PutMapping("/{appointmentId}/dentist")
+    public ResponseEntity<UpdateAppointmentDentistResponse> updateDentist(
+            @PathVariable Long appointmentId,
+            @RequestBody UpdateAppointmentDentistRequest request
+    ) {
+
+        return ResponseEntity.ok(
+                appointmentAvailabilityService.updateDentist(
                         appointmentId,
                         request
                 )

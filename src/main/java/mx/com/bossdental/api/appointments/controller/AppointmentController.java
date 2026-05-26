@@ -2,12 +2,11 @@ package mx.com.bossdental.api.appointments.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import mx.com.bossdental.api.appointments.dto.request.ConfirmAppointmentRequest;
-import mx.com.bossdental.api.appointments.dto.request.LockAppointmentRequest;
-import mx.com.bossdental.api.appointments.dto.request.UpdateAppointmentEndTimeRequest;
+import mx.com.bossdental.api.appointments.dto.request.*;
 import mx.com.bossdental.api.appointments.dto.response.AppointmentResponse;
 import mx.com.bossdental.api.appointments.dto.response.LockAppointmentResponse;
 import mx.com.bossdental.api.appointments.dto.response.StartSlotsResponse;
+import mx.com.bossdental.api.appointments.dto.response.UpdateAppointmentStartTimeResponse;
 import mx.com.bossdental.api.appointments.service.AppointmentAvailabilityService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -74,6 +73,35 @@ public class AppointmentController {
 
         return ResponseEntity.ok(
                 appointmentAvailabilityService.updateEndTime(
+                        appointmentId,
+                        request
+                )
+        );
+    }
+
+    /**
+     * Actualiza la hora de inicio de una cita bloqueada.
+     *
+     * Este flujo se usa cuando el usuario cambia la hora inicio
+     * desde el formulario de agenda.
+     *
+     * Al cambiar la hora inicio:
+     * - Se limpia la hora final actual.
+     * - Se conserva el bloqueo de la cita.
+     * - Se recalculan las horas fin disponibles.
+     *
+     * @param appointmentId ID de la cita bloqueada.
+     * @param request nueva hora inicio.
+     * @return cita bloqueada actualizada con horas fin disponibles.
+     */
+    @PutMapping("/{appointmentId}/start-time")
+    public ResponseEntity<UpdateAppointmentStartTimeResponse> updateStartTime(
+            @PathVariable Long appointmentId,
+            @RequestBody UpdateAppointmentStartTimeRequest request
+    ) {
+
+        return ResponseEntity.ok(
+                appointmentAvailabilityService.updateStartTime(
                         appointmentId,
                         request
                 )

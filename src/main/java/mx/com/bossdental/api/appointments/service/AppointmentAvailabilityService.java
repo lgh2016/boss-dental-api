@@ -2,14 +2,8 @@ package mx.com.bossdental.api.appointments.service;
 
 import lombok.RequiredArgsConstructor;
 import mx.com.bossdental.api.appointments.constants.AppointmentStatusCode;
-import mx.com.bossdental.api.appointments.dto.request.ConfirmAppointmentRequest;
-import mx.com.bossdental.api.appointments.dto.request.LockAppointmentRequest;
-import mx.com.bossdental.api.appointments.dto.request.UpdateAppointmentEndTimeRequest;
-import mx.com.bossdental.api.appointments.dto.request.UpdateAppointmentStartTimeRequest;
-import mx.com.bossdental.api.appointments.dto.response.AppointmentResponse;
-import mx.com.bossdental.api.appointments.dto.response.LockAppointmentResponse;
-import mx.com.bossdental.api.appointments.dto.response.StartSlotsResponse;
-import mx.com.bossdental.api.appointments.dto.response.UpdateAppointmentStartTimeResponse;
+import mx.com.bossdental.api.appointments.dto.request.*;
+import mx.com.bossdental.api.appointments.dto.response.*;
 import mx.com.bossdental.api.appointments.entity.Appointment;
 import mx.com.bossdental.api.appointments.entity.AppointmentStatus;
 import mx.com.bossdental.api.appointments.mapper.AppointmentMapper;
@@ -600,6 +594,72 @@ public class AppointmentAvailabilityService {
          * Retornar lock actualizado.
          */
         return appointmentMapper.toUpdateStartTimeResponse(appointment);
+    }
+
+    /**
+     * Actualiza el doctor de una cita bloqueada.
+     *
+     * Al cambiar doctor se conserva el mismo appointmentId,
+     * pero se limpian las horas porque la disponibilidad cambia.
+     *
+     * @param appointmentId ID de la cita.
+     * @param request nuevo doctor.
+     * @return información mínima del lock actualizado.
+     */
+    @Transactional(
+            noRollbackFor = AppointmentLockExpiredException.class
+    )
+    public UpdateAppointmentDentistResponse updateDentist(
+            Long appointmentId,
+            UpdateAppointmentDentistRequest request
+    ) {
+
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() ->
+                        new BusinessException("Appointment not found.")
+                );
+
+        if (!AppointmentStatusCode.LOCKED.equals(appointment.getStatus().getCode())) {
+            throw new BusinessException("Only LOCKED appointments can be updated.");
+        }
+
+        if (appointment.getLockedUntil() == null
+                || appointment.getLockedUntil().isBefore(LocalDateTime.now())) {
+
+            appointmentRepository.delete(appointment);
+            appointmentRepository.flush();
+
+            throw new AppointmentLockExpiredException("Appointment lock has expired.");
+        }
+
+        User doctor = userRepository.findById(request.getDentistId())
+                .orElseThrow(() ->
+                        new BusinessException("Doctor not found.")
+                );
+
+        if (!Boolean.TRUE.equals(doctor.getActive())) {
+            throw new BusinessException("Doctor is not active.");
+        }
+
+        if (doctor.getRole() == null || !"DENTIST".equals(doctor.getRole().getName())) {
+            throw new BusinessException("Selected user is not a dentist.");
+        }
+
+        appointment.setDentist(doctor);
+
+        /*
+         * Al cambiar doctor, las horas anteriores ya no aplican.
+         */
+        appointment.setStartTime(null);
+        appointment.setEndTime(null);
+
+        appointment.setLockedUntil(
+                LocalDateTime.now().plusMinutes(LOCK_MINUTES)
+        );
+
+        appointmentRepository.save(appointment);
+
+        return appointmentMapper.toUpdateDentistResponse(appointment);
     }
 
 

@@ -59,14 +59,20 @@ public class Appointment extends BaseEntity {
 
     /**
      * Hora inicial de la cita.
+     *
+     * Puede ser null cuando el usuario cambia doctor
+     * y aún no selecciona nueva hora inicio.
      */
-    @Column(nullable = false)
+    @Column
     private LocalTime startTime;
 
     /**
      * Hora final de la cita.
+     *
+     * Puede ser null cuando el usuario cambia doctor
+     * o cambia hora inicio y aún no selecciona nueva hora fin.
      */
-    @Column(nullable = false)
+    @Column
     private LocalTime endTime;
 
     /**

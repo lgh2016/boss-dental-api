@@ -126,4 +126,26 @@ public class AppointmentController {
                 )
         );
     }
+
+    /**
+     * Actualiza la fecha
+     * de una cita bloqueada.
+     *
+     * @param appointmentId ID de la cita.
+     * @param request nueva fecha.
+     * @return lock actualizado.
+     */
+    @PutMapping("/{appointmentId}/date")
+    public ResponseEntity<UpdateAppointmentDateResponse> updateDate(
+            @PathVariable Long appointmentId,
+            @Valid @RequestBody UpdateAppointmentDateRequest request
+    ) {
+
+        return ResponseEntity.ok(
+                appointmentAvailabilityService.updateDate(
+                        appointmentId,
+                        request
+                )
+        );
+    }
 }

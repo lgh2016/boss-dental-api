@@ -662,6 +662,122 @@ public class AppointmentAvailabilityService {
         return appointmentMapper.toUpdateDentistResponse(appointment);
     }
 
+    /**
+     * Actualiza la fecha de una cita bloqueada.
+     *
+     * Al cambiar la fecha se conserva el mismo appointmentId,
+     * pero se limpian las horas porque la disponibilidad cambia.
+     *
+     * @param appointmentId ID de la cita.
+     * @param request nueva fecha.
+     * @return información mínima del lock actualizado.
+     */
+    @Transactional(
+            noRollbackFor = AppointmentLockExpiredException.class
+    )
+    public UpdateAppointmentDateResponse updateDate(
+            Long appointmentId,
+            UpdateAppointmentDateRequest request
+    ) {
+
+        /*
+         * Buscar cita.
+         */
+        Appointment appointment = appointmentRepository.findById(
+                        appointmentId
+                )
+                .orElseThrow(() ->
+                        new BusinessException(
+                                "Appointment not found."
+                        )
+                );
+
+        /*
+         * Validar status LOCKED.
+         */
+        if (!AppointmentStatusCode.LOCKED.equals(
+                appointment.getStatus().getCode()
+        )) {
+
+            throw new BusinessException(
+                    "Only LOCKED appointments can be updated."
+            );
+        }
+
+        /*
+         * Validar expiración del lock.
+         */
+        if (appointment.getLockedUntil() == null
+                || appointment.getLockedUntil()
+                .isBefore(LocalDateTime.now())) {
+
+            appointmentRepository.delete(appointment);
+            appointmentRepository.flush();
+
+            throw new AppointmentLockExpiredException(
+                    "Appointment lock has expired."
+            );
+        }
+
+        /*
+         * Validar que la nueva fecha no sea pasada.
+         */
+        if (request.getAppointmentDate().isBefore(
+                LocalDate.now()
+        )) {
+
+            throw new BusinessException(
+                    "Appointment date cannot be in the past."
+            );
+        }
+
+        /*
+         * Validar que el consultorio abra ese día.
+         *
+         * getCloseTime lanza error si es domingo.
+         */
+        getCloseTime(
+                request.getAppointmentDate()
+        );
+
+        /*
+         * Actualizar fecha.
+         */
+        appointment.setAppointmentDate(
+                request.getAppointmentDate()
+        );
+
+        /*
+         * Limpiar horarios porque la disponibilidad
+         * depende de la nueva fecha.
+         */
+        appointment.setStartTime(null);
+        appointment.setEndTime(null);
+
+        /*
+         * Renovar lock.
+         */
+        appointment.setLockedUntil(
+                LocalDateTime.now().plusMinutes(
+                        LOCK_MINUTES
+                )
+        );
+
+        /*
+         * Guardar cambios.
+         */
+        appointmentRepository.save(
+                appointment
+        );
+
+        /*
+         * Retornar response.
+         */
+        return appointmentMapper.toUpdateDateResponse(
+                appointment
+        );
+    }
+
 
     // METODOS PRIVADOS.
 

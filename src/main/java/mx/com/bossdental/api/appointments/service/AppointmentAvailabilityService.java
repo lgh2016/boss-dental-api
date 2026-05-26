@@ -5,9 +5,11 @@ import mx.com.bossdental.api.appointments.constants.AppointmentStatusCode;
 import mx.com.bossdental.api.appointments.dto.request.ConfirmAppointmentRequest;
 import mx.com.bossdental.api.appointments.dto.request.LockAppointmentRequest;
 import mx.com.bossdental.api.appointments.dto.request.UpdateAppointmentEndTimeRequest;
+import mx.com.bossdental.api.appointments.dto.request.UpdateAppointmentStartTimeRequest;
 import mx.com.bossdental.api.appointments.dto.response.AppointmentResponse;
 import mx.com.bossdental.api.appointments.dto.response.LockAppointmentResponse;
 import mx.com.bossdental.api.appointments.dto.response.StartSlotsResponse;
+import mx.com.bossdental.api.appointments.dto.response.UpdateAppointmentStartTimeResponse;
 import mx.com.bossdental.api.appointments.entity.Appointment;
 import mx.com.bossdental.api.appointments.entity.AppointmentStatus;
 import mx.com.bossdental.api.appointments.mapper.AppointmentMapper;
@@ -27,7 +29,9 @@ import mx.com.bossdental.api.patients.repository.PatientRepository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -466,6 +470,136 @@ public class AppointmentAvailabilityService {
                 appointment.getLockedUntil(),
                 List.of()
         );
+    }
+
+    /**
+     * Actualiza la hora de inicio
+     * de una cita bloqueada.
+     *
+     * Este flujo solo cambia la hora inicio.
+     * La hora final se limpia porque debe recalcularse
+     * desde el front usando el WS de horas fin disponibles.
+     *
+     * @param appointmentId ID de la cita.
+     * @param request nueva hora inicio.
+     * @return lock actualizado.
+     */
+    @Transactional(
+            noRollbackFor = AppointmentLockExpiredException.class
+    )
+    public UpdateAppointmentStartTimeResponse updateStartTime(
+            Long appointmentId,
+            UpdateAppointmentStartTimeRequest request
+    ) {
+
+        /*
+         * Buscar cita.
+         */
+        Appointment appointment = appointmentRepository.findById(
+                        appointmentId
+                )
+                .orElseThrow(() ->
+                        new BusinessException(
+                                "Appointment not found."
+                        )
+                );
+
+        /*
+         * Validar status LOCKED.
+         */
+            if (!AppointmentStatusCode.LOCKED.equals(
+                appointment.getStatus().getCode()
+        )) {
+
+            throw new BusinessException(
+                    "Only LOCKED appointments can be updated."
+            );
+        }
+
+        /*
+         * Validar expiración del lock.
+         */
+        if (appointment.getLockedUntil() == null
+                || appointment.getLockedUntil()
+                .isBefore(LocalDateTime.now())) {
+
+            appointmentRepository.delete(appointment);
+            appointmentRepository.flush();
+
+            throw new AppointmentLockExpiredException(
+                    "Appointment lock has expired."
+            );
+        }
+
+        /*
+         * Validar que la nueva hora inicio
+         * no sea de una fecha pasada.
+         */
+        if (isPastSlot(
+                appointment.getAppointmentDate(),
+                request.getStartTime()
+        )) {
+
+            throw new BusinessException(
+                    "Start time cannot be in the past."
+            );
+        }
+
+        /*
+         * Validar que la nueva hora inicio
+         * esté dentro del horario del consultorio.
+         */
+        if (request.getStartTime().isBefore(OPEN_TIME)
+                || !request.getStartTime().isBefore(
+                getCloseTime(
+                        appointment.getAppointmentDate()
+                )
+        )) {
+
+            throw new BusinessException(
+                    "Start time is outside clinic hours."
+            );
+        }
+
+        /*
+         * Actualizar nueva hora inicio.
+         */
+        appointment.setStartTime(
+                request.getStartTime()
+        );
+
+        /*
+         * Mantener bloqueo provisional.
+         *
+         * Aunque el front limpie visualmente la hora fin,
+         * en base se deja una duración provisional para que
+         * el nuevo horario siga bloqueado frente a otros usuarios.
+         */
+        appointment.setEndTime(
+                request.getStartTime().plusMinutes(DEFAULT_APPOINTMENT_MINUTES)
+        );
+
+
+        /*
+         * Renovar lock.
+         */
+        appointment.setLockedUntil(
+                LocalDateTime.now().plusMinutes(
+                        LOCK_MINUTES
+                )
+        );
+
+        /*
+         * Guardar cambios.
+         */
+        appointmentRepository.save(
+                appointment
+        );
+
+        /*
+         * Retornar lock actualizado.
+         */
+        return appointmentMapper.toUpdateStartTimeResponse(appointment);
     }
 
 

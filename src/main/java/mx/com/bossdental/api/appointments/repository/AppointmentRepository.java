@@ -2,21 +2,17 @@ package mx.com.bossdental.api.appointments.repository;
 
 import mx.com.bossdental.api.appointments.entity.Appointment;
 import mx.com.bossdental.api.appointments.entity.AppointmentStatus;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 
 public interface AppointmentRepository extends JpaRepository<Appointment, Long> {
-
-    List<Appointment> findByAppointmentDate(LocalDate appointmentDate);
-
-    List<Appointment> findByPatientId(Long patientId);
-
-    List<Appointment> findByDentistIdAndAppointmentDate(Long dentistId, LocalDate appointmentDate);
 
     @Query(value = """
         SELECT a.*

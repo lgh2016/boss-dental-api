@@ -13,8 +13,12 @@ import mx.com.bossdental.api.branches.entity.Branch;
 import mx.com.bossdental.api.branches.repository.BranchRepository;
 import mx.com.bossdental.api.exceptions.AppointmentLockExpiredException;
 import mx.com.bossdental.api.exceptions.BusinessException;
+import mx.com.bossdental.api.security.service.AuthenticatedUserService;
 import mx.com.bossdental.api.users.entity.User;
 import mx.com.bossdental.api.users.repository.UserRepository;
+import mx.com.bossdental.api.activity.constant.ActivityActions;
+import mx.com.bossdental.api.activity.constant.ActivityModules;
+import mx.com.bossdental.api.activity.service.RegisterActivityService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import mx.com.bossdental.api.patients.entity.Patient;
@@ -23,9 +27,8 @@ import mx.com.bossdental.api.patients.repository.PatientRepository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
+
 
 @Service
 @RequiredArgsConstructor
@@ -45,6 +48,8 @@ public class AppointmentAvailabilityService {
     private final BranchRepository branchRepository;
     private final PatientRepository patientRepository;
     private final AppointmentMapper appointmentMapper;
+    private final RegisterActivityService registerActivityService;
+    private final AuthenticatedUserService authenticatedUserService;
 
     public StartSlotsResponse getStartSlots(Long doctorId, Long branchId, LocalDate date) {
 
@@ -202,6 +207,9 @@ public class AppointmentAvailabilityService {
             ConfirmAppointmentRequest request
     ) {
 
+        Long authenticatedUserId =
+                authenticatedUserService.getAuthenticatedUserId();
+
         /*
          * Buscar cita.
          */
@@ -294,6 +302,23 @@ public class AppointmentAvailabilityService {
          */
         appointmentRepository.save(
                 appointment
+        );
+
+        /*
+         * Registrar actividad.
+         */
+        registerActivityService.registerActivity(
+                "USER",
+                authenticatedUserId,
+                ActivityActions.APPOINTMENT_CREATED,
+                ActivityModules.APPOINTMENTS,
+                "APPOINTMENT",
+                appointment.getId(),
+                "Cita agendada",
+                "Se agendó una cita para "
+                        + patient.getName()
+                        + " "
+                        + patient.getLastName()
         );
 
         /*

@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 
 @RestController
 @RequestMapping("/appointments")
@@ -146,6 +147,43 @@ public class AppointmentController {
                         appointmentId,
                         request
                 )
+        );
+    }
+
+    /**
+     * Consulta las horas fin disponibles
+     * para una cita bloqueada existente.
+     *
+     * @param appointmentId ID de la cita bloqueada.
+     * @param startTime hora inicio seleccionada.
+     * @return horas fin disponibles.
+     */
+    @GetMapping("/{appointmentId}/end-slots")
+    public ResponseEntity<EndSlotsResponse> getEndSlots(
+            @PathVariable Long appointmentId,
+            @RequestParam LocalTime startTime
+    ) {
+
+        return ResponseEntity.ok(
+                appointmentAvailabilityService.getEndSlots(
+                        appointmentId,
+                        startTime
+                )
+        );
+    }
+
+    /**
+     * Elimina appointments LOCKED expirados
+     * que puedan bloquear disponibilidad.
+     *
+     * @return resultado de la limpieza.
+     */
+    @PostMapping("/cleanup-expired-locks")
+    public ResponseEntity<CleanupExpiredLocksResponse>
+    cleanupExpiredLocks() {
+
+        return ResponseEntity.ok(
+                appointmentAvailabilityService.cleanupExpiredLocks()
         );
     }
 }

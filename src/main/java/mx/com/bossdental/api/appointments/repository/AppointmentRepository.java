@@ -4,10 +4,12 @@ import mx.com.bossdental.api.appointments.entity.Appointment;
 import mx.com.bossdental.api.appointments.entity.AppointmentStatus;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
@@ -34,6 +36,25 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
             @Param("branchId") Long branchId,
             @Param("appointmentDate") LocalDate appointmentDate,
             @Param("blockingStatuses") List<String> blockingStatuses
+    );
+
+    /*
+     * Eliminar únicamente appointments
+     * con status LOCKED cuyo tiempo
+     * de bloqueo ya expiró.
+     *
+     * No eliminar locks vigentes.
+     */
+    @Modifying
+    @Query("""
+    DELETE FROM Appointment a
+    WHERE a.status.code = :status
+      AND a.lockedUntil IS NOT NULL
+      AND a.lockedUntil < :now
+""")
+    int deleteExpiredLocks(
+            @Param("status") String status,
+            @Param("now") LocalDateTime now
     );
 
 

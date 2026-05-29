@@ -778,6 +778,157 @@ public class AppointmentAvailabilityService {
         );
     }
 
+    /**
+     * Consulta las horas fin disponibles
+     * para una cita bloqueada existente.
+     *
+     * Este método no crea un nuevo appointment.
+     * Solo reutiliza la lógica de cálculo de endSlots.
+     *
+     * @param appointmentId ID de la cita bloqueada.
+     * @param startTime hora inicio seleccionada.
+     * @return horas fin disponibles.
+     */
+    public EndSlotsResponse getEndSlots(
+            Long appointmentId,
+            LocalTime startTime
+    ) {
+
+        /*
+         * Buscar cita.
+         */
+        Appointment appointment = appointmentRepository.findById(
+                        appointmentId
+                )
+                .orElseThrow(() ->
+                        new BusinessException(
+                                "Appointment not found."
+                        )
+                );
+
+        /*
+         * Validar status LOCKED.
+         */
+        if (!AppointmentStatusCode.LOCKED.equals(
+                appointment.getStatus().getCode()
+        )) {
+
+            throw new BusinessException(
+                    "Only LOCKED appointments can be updated."
+            );
+        }
+
+        /*
+         * Validar expiración del lock.
+         */
+        if (appointment.getLockedUntil() == null
+                || appointment.getLockedUntil()
+                .isBefore(LocalDateTime.now())) {
+
+            appointmentRepository.delete(appointment);
+            appointmentRepository.flush();
+
+            throw new AppointmentLockExpiredException(
+                    "Appointment lock has expired."
+            );
+        }
+
+        /*
+         * Buscar citas que bloquean disponibilidad.
+         */
+        List<String> blockingStatuses = List.of(
+                AppointmentStatusCode.LOCKED,
+                AppointmentStatusCode.CONFIRMED,
+                AppointmentStatusCode.COMPLETED
+        );
+
+        List<Appointment> blockingAppointments =
+                appointmentRepository.findAppointmentsBlockingAvailability(
+                        appointment.getDentist().getId(),
+                        appointment.getBranch().getId(),
+                        appointment.getAppointmentDate(),
+                        blockingStatuses
+                );
+
+        /*
+         * Excluir la cita actual para que no choque consigo misma.
+         */
+        blockingAppointments = blockingAppointments.stream()
+                .filter(item ->
+                        !item.getId().equals(
+                                appointment.getId()
+                        )
+                )
+                .toList();
+
+        /*
+         * Calcular horas fin disponibles usando la lógica existente.
+         */
+        List<LocalTime> endSlots = buildEndSlots(
+                appointment.getAppointmentDate(),
+                startTime,
+                blockingAppointments
+        );
+
+        /*
+         * Construir response.
+         */
+        EndSlotsResponse response = new EndSlotsResponse();
+        response.setAppointmentId(
+                appointment.getId()
+        );
+        response.setStartTime(
+                startTime
+        );
+        response.setEndSlots(
+                endSlots
+        );
+
+        return response;
+    }
+
+    /**
+     * Elimina appointments LOCKED expirados
+     * que ya no deben bloquear disponibilidad.
+     *
+     * Este proceso puede ser ejecutado
+     * manualmente desde un endpoint o
+     * automáticamente mediante scheduler.
+     *
+     * @return resultado de la limpieza.
+     */
+    @Transactional
+    public CleanupExpiredLocksResponse cleanupExpiredLocks() {
+
+        /*
+         * Eliminar locks expirados.
+         */
+        int deletedCount = appointmentRepository
+                .deleteExpiredLocks(
+                        AppointmentStatusCode.LOCKED,
+                        LocalDateTime.now()
+                );
+
+        /*
+         * Construir response.
+         */
+        CleanupExpiredLocksResponse response =
+                new CleanupExpiredLocksResponse();
+
+        response.setDeletedCount(
+                deletedCount
+        );
+
+        response.setExecutedAt(
+                LocalDateTime.now()
+        );
+
+        response.setMessage(
+                "Expired appointment locks cleaned successfully."
+        );
+
+        return response;
+    }
 
     // METODOS PRIVADOS.
 

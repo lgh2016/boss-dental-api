@@ -1,10 +1,8 @@
-package mx.com.bossdental.api.patients.dto;
+package mx.com.bossdental.api.patients.dto.request;
 
 import java.time.LocalDate;
 
-public record PatientResponse(
-        Long id,
-        String patientNumber,
+public record CreatePatientRequest(
         String name,
         String lastName,
         String email,

@@ -38,4 +38,9 @@ public final class AppointmentStatusCode {
      */
     public static final String NO_SHOW = "NO_SHOW";
 
+    /**
+     * Paciente está en consulta
+     */
+    public static final String IN_PROGRESS = "IN_PROGRESS";
+
 }

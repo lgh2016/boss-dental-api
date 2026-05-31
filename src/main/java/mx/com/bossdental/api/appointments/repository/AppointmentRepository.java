@@ -2,6 +2,7 @@ package mx.com.bossdental.api.appointments.repository;
 
 import mx.com.bossdental.api.appointments.entity.Appointment;
 import mx.com.bossdental.api.appointments.entity.AppointmentStatus;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -55,6 +56,102 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     int deleteExpiredLocks(
             @Param("status") String status,
             @Param("now") LocalDateTime now
+    );
+
+    /**
+     * Consulta citas dentro de un rango mensual.
+     *
+     * Permite filtrar por doctor
+     * y sucursal.
+     *
+     * @param startDate fecha inicial.
+     * @param endDate fecha final.
+     * @param doctorId doctor opcional.
+     * @param branchId sucursal opcional.
+     * @param statuses status visibles.
+     * @return citas encontradas.
+     */
+    @Query("""
+        SELECT a
+        FROM Appointment a
+        WHERE a.active = true
+          AND a.appointmentDate BETWEEN :startDate AND :endDate
+          AND (:doctorId IS NULL OR a.dentist.id = :doctorId)
+          AND (:branchId IS NULL OR a.branch.id = :branchId)
+          AND a.status.code IN :statuses
+        ORDER BY a.appointmentDate ASC,
+                 a.startTime ASC
+        """)
+    List<Appointment> findMonthSchedule(
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate,
+            @Param("doctorId") Long doctorId,
+            @Param("branchId") Long branchId,
+            @Param("statuses") List<String> statuses
+    );
+
+    /**
+     * Consulta citas de un día específico.
+     *
+     * Permite filtrar por doctor
+     * y sucursal.
+     *
+     * @param date fecha consultada.
+     * @param doctorId doctor opcional.
+     * @param branchId sucursal opcional.
+     * @param statuses status visibles.
+     * @return citas encontradas.
+     */
+    @Query("""
+        SELECT a
+        FROM Appointment a
+        WHERE a.active = true
+          AND a.appointmentDate = :date
+          AND (:doctorId IS NULL OR a.dentist.id = :doctorId)
+          AND (:branchId IS NULL OR a.branch.id = :branchId)
+          AND a.status.code IN :statuses
+        ORDER BY a.startTime ASC
+        """)
+    List<Appointment> findDaySchedule(
+            @Param("date") LocalDate date,
+            @Param("doctorId") Long doctorId,
+            @Param("branchId") Long branchId,
+            @Param("statuses") List<String> statuses
+    );
+
+    /**
+     * Cuenta las citas activas del día, excluyendo citas canceladas o liberadas.
+     *
+     * @param appointmentDate fecha de la cita
+     * @return total de citas del día
+     */
+    @Query("""
+    SELECT COUNT(a)
+    FROM Appointment a
+    WHERE a.active = true
+      AND a.appointmentDate = :appointmentDate
+      AND a.status.code NOT IN ('CANCELLED', 'RELEASED')
+""")
+    Long countTodayAppointments(@Param("appointmentDate") LocalDate appointmentDate);
+
+    /**
+     * Consulta las citas activas del día, excluyendo citas canceladas o liberadas.
+     *
+     * @param appointmentDate fecha de la cita
+     * @param pageable configuración de paginación
+     * @return página de citas del día
+     */
+    @Query("""
+    SELECT a
+    FROM Appointment a
+    WHERE a.active = true
+      AND a.appointmentDate = :appointmentDate
+      AND a.status.code NOT IN ('CANCELLED', 'RELEASED')
+    ORDER BY a.startTime ASC
+""")
+    Page<Appointment> findTodayAppointments(
+            @Param("appointmentDate") LocalDate appointmentDate,
+            Pageable pageable
     );
 
 

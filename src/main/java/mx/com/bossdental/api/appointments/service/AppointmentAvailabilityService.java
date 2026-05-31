@@ -955,6 +955,7 @@ public class AppointmentAvailabilityService {
         return response;
     }
 
+
     // METODOS PRIVADOS.
 
     private boolean isPastSlot(LocalDate date, LocalTime startTime) {

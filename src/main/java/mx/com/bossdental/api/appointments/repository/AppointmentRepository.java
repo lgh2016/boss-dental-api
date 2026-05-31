@@ -154,5 +154,61 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
             Pageable pageable
     );
 
+    /**
+     * Obtiene la cita más reciente del paciente ocurrida antes
+     * de la fecha y hora actual.
+     *
+     * @param patientId identificador único del paciente
+     * @param pageable configuración de paginación
+     * @return listado de citas anteriores ordenadas de la más reciente a la más antigua
+     */
+    @Query("""
+    SELECT a
+    FROM Appointment a
+    LEFT JOIN FETCH a.dentist d
+    LEFT JOIN FETCH a.status s
+    WHERE a.patient.id = :patientId
+      AND (
+            a.appointmentDate < CURRENT_DATE
+            OR (
+                a.appointmentDate = CURRENT_DATE
+                AND a.startTime < CURRENT_TIME
+            )
+      )
+    ORDER BY a.appointmentDate DESC, a.startTime DESC
+""")
+    List<Appointment> findPreviousAppointmentsByPatientId(
+            @Param("patientId") Long patientId,
+            Pageable pageable
+    );
+
+    /**
+     * Obtiene la próxima cita del paciente a partir
+     * de la fecha y hora actual.
+     *
+     * @param patientId identificador único del paciente
+     * @param pageable configuración de paginación
+     * @return listado de próximas citas ordenadas de la más cercana a la más lejana
+     */
+    @Query("""
+    SELECT a
+    FROM Appointment a
+    LEFT JOIN FETCH a.dentist d
+    LEFT JOIN FETCH a.status s
+    WHERE a.patient.id = :patientId
+      AND (
+            a.appointmentDate > CURRENT_DATE
+            OR (
+                a.appointmentDate = CURRENT_DATE
+                AND a.startTime >= CURRENT_TIME
+            )
+      )
+    ORDER BY a.appointmentDate ASC, a.startTime ASC
+""")
+    List<Appointment> findNextAppointmentsByPatientId(
+            @Param("patientId") Long patientId,
+            Pageable pageable
+    );
+
 
 }

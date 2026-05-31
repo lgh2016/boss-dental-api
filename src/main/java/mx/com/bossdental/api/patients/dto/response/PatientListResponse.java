@@ -1,4 +1,4 @@
-package mx.com.bossdental.api.patients.dto;
+package mx.com.bossdental.api.patients.dto.response;
 
 public record PatientListResponse(
         Long id,

@@ -39,6 +39,16 @@ public class User extends BaseEntity {
     @Column(name = "birth_date")
     private LocalDate birthDate;
 
+    /**
+     * Género del usuario.
+     *
+     * Valores:
+     * MALE
+     * FEMALE
+     */
+    @Column(length = 20)
+    private String gender;
+
     @Column(name = "professional_license", length = 100)
     private String professionalLicense;
 

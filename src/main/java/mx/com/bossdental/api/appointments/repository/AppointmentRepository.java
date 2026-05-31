@@ -57,5 +57,66 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
             @Param("now") LocalDateTime now
     );
 
+    /**
+     * Consulta citas dentro de un rango mensual.
+     *
+     * Permite filtrar por doctor
+     * y sucursal.
+     *
+     * @param startDate fecha inicial.
+     * @param endDate fecha final.
+     * @param doctorId doctor opcional.
+     * @param branchId sucursal opcional.
+     * @param statuses status visibles.
+     * @return citas encontradas.
+     */
+    @Query("""
+        SELECT a
+        FROM Appointment a
+        WHERE a.active = true
+          AND a.appointmentDate BETWEEN :startDate AND :endDate
+          AND (:doctorId IS NULL OR a.dentist.id = :doctorId)
+          AND (:branchId IS NULL OR a.branch.id = :branchId)
+          AND a.status.code IN :statuses
+        ORDER BY a.appointmentDate ASC,
+                 a.startTime ASC
+        """)
+    List<Appointment> findMonthSchedule(
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate,
+            @Param("doctorId") Long doctorId,
+            @Param("branchId") Long branchId,
+            @Param("statuses") List<String> statuses
+    );
+
+    /**
+     * Consulta citas de un día específico.
+     *
+     * Permite filtrar por doctor
+     * y sucursal.
+     *
+     * @param date fecha consultada.
+     * @param doctorId doctor opcional.
+     * @param branchId sucursal opcional.
+     * @param statuses status visibles.
+     * @return citas encontradas.
+     */
+    @Query("""
+        SELECT a
+        FROM Appointment a
+        WHERE a.active = true
+          AND a.appointmentDate = :date
+          AND (:doctorId IS NULL OR a.dentist.id = :doctorId)
+          AND (:branchId IS NULL OR a.branch.id = :branchId)
+          AND a.status.code IN :statuses
+        ORDER BY a.startTime ASC
+        """)
+    List<Appointment> findDaySchedule(
+            @Param("date") LocalDate date,
+            @Param("doctorId") Long doctorId,
+            @Param("branchId") Long branchId,
+            @Param("statuses") List<String> statuses
+    );
+
 
 }

@@ -5,11 +5,13 @@ import lombok.RequiredArgsConstructor;
 import mx.com.bossdental.api.appointments.dto.request.*;
 import mx.com.bossdental.api.appointments.dto.response.*;
 import mx.com.bossdental.api.appointments.service.AppointmentAvailabilityService;
+import mx.com.bossdental.api.appointments.service.AppointmentScheduleService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
 
 @RestController
 @RequestMapping("/appointments")
@@ -17,6 +19,7 @@ import java.time.LocalTime;
 public class AppointmentController {
 
     private final AppointmentAvailabilityService appointmentAvailabilityService;
+    private final AppointmentScheduleService appointmentScheduleService;
 
     @GetMapping("/start-slots")
     public StartSlotsResponse getStartSlots(
@@ -184,6 +187,85 @@ public class AppointmentController {
 
         return ResponseEntity.ok(
                 appointmentAvailabilityService.cleanupExpiredLocks()
+        );
+    }
+
+    /**
+     * Consulta agenda diaria.
+     *
+     * @param date fecha consultada.
+     * @param doctorId doctor opcional.
+     * @param branchId sucursal opcional.
+     * @return agenda diaria.
+     */
+    @GetMapping("/schedule/day")
+    public ResponseEntity<
+            List<AppointmentDayScheduleResponse>
+            > getDaySchedule(
+            @RequestParam LocalDate date,
+            @RequestParam(required = false)
+            Long doctorId,
+            @RequestParam(required = false)
+            Long branchId
+    ) {
+
+        return ResponseEntity.ok(
+                appointmentScheduleService
+                        .getDaySchedule(
+                                date,
+                                doctorId,
+                                branchId
+                        )
+        );
+    }
+
+    /**
+     * Consulta agenda mensual.
+     *
+     * @param year año consultado.
+     * @param month mes consultado.
+     * @param doctorId doctor opcional.
+     * @param branchId sucursal opcional.
+     * @return agenda mensual.
+     */
+    @GetMapping("/schedule/month")
+    public ResponseEntity<
+            List<AppointmentMonthScheduleResponse>
+            > getMonthSchedule(
+            @RequestParam Integer year,
+            @RequestParam Integer month,
+            @RequestParam(required = false)
+            Long doctorId,
+            @RequestParam(required = false)
+            Long branchId
+    ) {
+
+        return ResponseEntity.ok(
+                appointmentScheduleService
+                        .getMonthSchedule(
+                                year,
+                                month,
+                                doctorId,
+                                branchId
+                        )
+        );
+    }
+
+    /**
+     * Consulta el detalle de una cita.
+     *
+     * @param appointmentId ID de la cita.
+     * @return detalle de la cita.
+     */
+    @GetMapping("/{appointmentId}")
+    public ResponseEntity<AppointmentDetailResponse> getAppointmentDetail(
+            @PathVariable Long appointmentId
+    ) {
+
+        return ResponseEntity.ok(
+                appointmentScheduleService.getAppointmentDetail(
+                        appointmentId
+                )
         );
     }
 }

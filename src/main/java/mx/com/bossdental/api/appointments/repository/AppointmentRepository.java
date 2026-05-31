@@ -2,6 +2,7 @@ package mx.com.bossdental.api.appointments.repository;
 
 import mx.com.bossdental.api.appointments.entity.Appointment;
 import mx.com.bossdental.api.appointments.entity.AppointmentStatus;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -116,6 +117,41 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
             @Param("doctorId") Long doctorId,
             @Param("branchId") Long branchId,
             @Param("statuses") List<String> statuses
+    );
+
+    /**
+     * Cuenta las citas activas del día, excluyendo citas canceladas o liberadas.
+     *
+     * @param appointmentDate fecha de la cita
+     * @return total de citas del día
+     */
+    @Query("""
+    SELECT COUNT(a)
+    FROM Appointment a
+    WHERE a.active = true
+      AND a.appointmentDate = :appointmentDate
+      AND a.status.code NOT IN ('CANCELLED', 'RELEASED')
+""")
+    Long countTodayAppointments(@Param("appointmentDate") LocalDate appointmentDate);
+
+    /**
+     * Consulta las citas activas del día, excluyendo citas canceladas o liberadas.
+     *
+     * @param appointmentDate fecha de la cita
+     * @param pageable configuración de paginación
+     * @return página de citas del día
+     */
+    @Query("""
+    SELECT a
+    FROM Appointment a
+    WHERE a.active = true
+      AND a.appointmentDate = :appointmentDate
+      AND a.status.code NOT IN ('CANCELLED', 'RELEASED')
+    ORDER BY a.startTime ASC
+""")
+    Page<Appointment> findTodayAppointments(
+            @Param("appointmentDate") LocalDate appointmentDate,
+            Pageable pageable
     );
 
 

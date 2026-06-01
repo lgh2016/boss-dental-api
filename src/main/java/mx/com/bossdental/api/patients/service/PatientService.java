@@ -1,6 +1,7 @@
 package mx.com.bossdental.api.patients.service;
 
 import lombok.RequiredArgsConstructor;
+import mx.com.bossdental.api.activity.service.RegisterActivityService;
 import mx.com.bossdental.api.appointments.entity.Appointment;
 import mx.com.bossdental.api.appointments.repository.AppointmentRepository;
 import mx.com.bossdental.api.clinicalrecords.entity.ClinicalRecord;
@@ -15,6 +16,7 @@ import mx.com.bossdental.api.patients.dto.response.PatientResponse;
 import mx.com.bossdental.api.patients.entity.Patient;
 import mx.com.bossdental.api.patients.mapper.PatientMapper;
 import mx.com.bossdental.api.patients.repository.PatientRepository;
+import mx.com.bossdental.api.security.service.AuthenticatedUserService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -35,6 +37,8 @@ public class PatientService {
     private final ClinicalRecordRepository clinicalRecordRepository;
     private final PatientMapper patientMapper;
     private final AppointmentRepository appointmentRepository;
+    private final RegisterActivityService registerActivityService;
+    private final AuthenticatedUserService authenticatedUserService;
 
     private static final String DEFAULT_BRANCH_NAME = "Ecatepec";
 
@@ -64,6 +68,9 @@ public class PatientService {
     @Transactional
     public PatientResponse createPatient(PatientCreateRequest request) {
 
+        Long authenticatedUserId =
+                authenticatedUserService.getAuthenticatedUserId();
+
         Patient patient = patientMapper.toEntity(request);
         patient.setActive(true);
 
@@ -75,6 +82,18 @@ public class PatientService {
         clinicalRecord.setActive(true);
 
         clinicalRecordRepository.save(clinicalRecord);
+
+        registerActivityService.registerActivity(
+                "USER",
+                authenticatedUserId,
+                savedPatient.getId(),
+                "PATIENT_CREATED",
+                "PATIENTS",
+                "PATIENT",
+                savedPatient.getId(),
+                "Paciente creado",
+                "Se creó el paciente " + buildPatientFullName(savedPatient)
+        );
 
         return patientMapper.toResponse(savedPatient);
     }
@@ -131,6 +150,17 @@ public class PatientService {
         response.setNextAppointment(nextAppointment);
 
         return response;
+    }
+
+    /**
+     * Construye el nombre completo del paciente.
+     *
+     * @param patient paciente.
+     * @return nombre completo.
+     */
+    private String buildPatientFullName(Patient patient) {
+
+        return patient.getName() + " " + patient.getLastName();
     }
 
     private String generateExpedientNumber() {

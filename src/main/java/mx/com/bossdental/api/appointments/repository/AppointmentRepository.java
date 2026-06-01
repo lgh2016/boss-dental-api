@@ -210,5 +210,14 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
             Pageable pageable
     );
 
+    /**
+     * Obtiene las citas activas de un paciente
+     * ordenadas de la más reciente a la más antigua.
+     *
+     * @param patientId ID del paciente.
+     * @return lista de citas del paciente.
+     */
+    List<Appointment> findByPatientIdAndActiveTrueOrderByAppointmentDateDescStartTimeDesc(Long patientId);
+
 
 }

@@ -36,4 +36,10 @@ public class ActivityLog extends BaseEntity {
 
     @Column(columnDefinition = "TEXT")
     private String metadata;
+
+    /**
+     * ID del paciente relacionado con la actividad.
+     */
+    @Column(name = "patient_id")
+    private Long patientId;
 }

@@ -32,6 +32,7 @@ public class RegisterActivityService {
     public void registerActivity(
             String actorType,
             Long actorUserId,
+            Long patientId,
             String actionCode,
             String module,
             String entityType,
@@ -47,6 +48,7 @@ public class RegisterActivityService {
 
         activityLog.setActorType(actorType);
         activityLog.setActorUserId(actorUserId);
+        activityLog.setPatientId(patientId);
         activityLog.setActionCode(actionCode);
         activityLog.setModule(module);
         activityLog.setEntityType(entityType);

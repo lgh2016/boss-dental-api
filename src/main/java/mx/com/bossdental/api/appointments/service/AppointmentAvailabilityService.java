@@ -310,6 +310,7 @@ public class AppointmentAvailabilityService {
         registerActivityService.registerActivity(
                 "USER",
                 authenticatedUserId,
+                appointment.getPatient().getId(),
                 ActivityActions.APPOINTMENT_CREATED,
                 ActivityModules.APPOINTMENTS,
                 "APPOINTMENT",
